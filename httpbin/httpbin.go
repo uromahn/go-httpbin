@@ -9,8 +9,9 @@ import (
 
 // Default configuration values
 const (
-	DefaultMaxBodySize int64 = 1024 * 1024
-	DefaultMaxDuration       = 10 * time.Second
+	DefaultMaxBodySize  int64 = 1024 * 1024
+	DefaultMaxDuration        = 10 * time.Second
+	DefaultFileLocation       = "/tmp"
 )
 
 const jsonContentType = "application/json; encoding=utf-8"
@@ -107,6 +108,9 @@ type HTTPBin struct {
 
 	// Name of the host we are running on
 	HostnameStr string
+
+	// File location of external files to be served
+	ExternalFileLocation string
 }
 
 // DefaultParams defines default parameter values
@@ -131,6 +135,7 @@ func (h *HTTPBin) Handler() http.Handler {
 	mux.HandleFunc("/", methods(h.Index, "GET"))
 	mux.HandleFunc("/forms/post", methods(h.FormsPost, "GET"))
 	mux.HandleFunc("/encoding/utf8", methods(h.UTF8, "GET"))
+	mux.HandleFunc("/files/", h.Files)
 
 	mux.HandleFunc("/delete", methods(h.RequestWithBody, "DELETE"))
 	mux.HandleFunc("/get", methods(h.Get, "GET"))
@@ -226,9 +231,10 @@ func (h *HTTPBin) Handler() http.Handler {
 // New creates a new HTTPBin instance
 func New(opts ...OptionFunc) *HTTPBin {
 	h := &HTTPBin{
-		MaxBodySize:   DefaultMaxBodySize,
-		MaxDuration:   DefaultMaxDuration,
-		DefaultParams: DefaultDefaultParams,
+		MaxBodySize:          DefaultMaxBodySize,
+		MaxDuration:          DefaultMaxDuration,
+		DefaultParams:        DefaultDefaultParams,
+		ExternalFileLocation: DefaultFileLocation,
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -271,5 +277,12 @@ func WithMaxDuration(d time.Duration) OptionFunc {
 func WithObserver(o Observer) OptionFunc {
 	return func(h *HTTPBin) {
 		h.Observer = o
+	}
+}
+
+// WithExternalFileLocation sets the location folder for external files
+func WithExternalFileLocation(location string) OptionFunc {
+	return func(h *HTTPBin) {
+		h.ExternalFileLocation = location
 	}
 }

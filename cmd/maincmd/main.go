@@ -20,12 +20,13 @@ const defaultHost = "0.0.0.0"
 const defaultPort = 8080
 
 var (
-	host          string
-	port          int
-	maxBodySize   int64
-	maxDuration   time.Duration
-	httpsCertFile string
-	httpsKeyFile  string
+	host                 string
+	port                 int
+	maxBodySize          int64
+	maxDuration          time.Duration
+	httpsCertFile        string
+	httpsKeyFile         string
+	externalFileLocation string
 )
 
 // Main implements the go-httpbin CLI's main() function in a reusable way
@@ -36,6 +37,7 @@ func Main() {
 	flag.StringVar(&httpsKeyFile, "https-key-file", "", "HTTPS Server private key file")
 	flag.Int64Var(&maxBodySize, "max-body-size", httpbin.DefaultMaxBodySize, "Maximum size of request or response, in bytes")
 	flag.DurationVar(&maxDuration, "max-duration", httpbin.DefaultMaxDuration, "Maximum duration a response may take")
+	flag.StringVar(&externalFileLocation, "ext-file-location", httpbin.DefaultFileLocation, "Location of external files to be read by the '/files' path")
 	flag.Parse()
 
 	// Command line flags take precedence over environment vars, so we only
@@ -104,6 +106,7 @@ func Main() {
 		httpbin.WithMaxBodySize(maxBodySize),
 		httpbin.WithMaxDuration(maxDuration),
 		httpbin.WithObserver(httpbin.StdLogObserver(logger)),
+		httpbin.WithExternalFileLocation(externalFileLocation),
 	)
 
 	listenAddr := net.JoinHostPort(host, strconv.Itoa(port))

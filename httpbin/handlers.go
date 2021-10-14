@@ -6,7 +6,10 @@ import (
 	"compress/zlib"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -45,6 +48,35 @@ func (h *HTTPBin) FormsPost(w http.ResponseWriter, r *http.Request) {
 // UTF8 renders an HTML encoding stress test
 func (h *HTTPBin) UTF8(w http.ResponseWriter, r *http.Request) {
 	writeHTML(w, assets.MustAsset("utf8.html"), http.StatusOK)
+}
+
+// Files will read an external file from the file system, attempts to derive the mime type
+// from the filename extension, and serves it back.
+// If no file could be found, a 404 will be returned.
+func (h *HTTPBin) Files(w http.ResponseWriter, r *http.Request) {
+	defaultMimeType := "application/octet-stream"
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) != 3 {
+		http.Error(w, "Wrong path", http.StatusNotFound)
+		return
+	}
+	// extract the filename from the path
+	filename := parts[2]
+	// determine the mime type off the extension
+	ext := filepath.Ext(filename)
+	mimeType := mime.TypeByExtension(ext)
+	if mimeType == "" {
+		mimeType = defaultMimeType
+	}
+	// now we attempt to read the file from our path
+	absFile := filepath.Join(h.ExternalFileLocation, filename)
+	fmt.Fprintf(os.Stderr, "attempting to read file %s\n", absFile)
+	fileBytes, err := os.ReadFile(absFile)
+	if err != nil {
+		http.Error(w, "File not found - "+err.Error(), http.StatusNotFound)
+		return
+	}
+	writeResponse(w, http.StatusOK, mimeType, fileBytes)
 }
 
 // Get handles HTTP GET requests
@@ -126,6 +158,7 @@ func (h *HTTPBin) IP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, body, http.StatusOK)
 }
 
+// Hostname returns the name of the host this program is running on
 func (h *HTTPBin) Hostname(w http.ResponseWriter, r *http.Request) {
 	body, _ := json.Marshal(&hostnameResponse{
 		Hostname: h.HostnameStr,
